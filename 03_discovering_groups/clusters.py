@@ -1,6 +1,7 @@
 import numpy as np
 
 from scipy.stats import pearsonr
+from PIL import Image, ImageDraw
 
 
 class Node:
@@ -11,6 +12,9 @@ class Node:
         self.vec = vec
         self.nid = nid
         self.distance = distance
+        self.elements_size = 1 if (self.left is None and self.right is None) \
+            else (self.left.elements_size if self.left is not None else 0) + \
+                 (self.right.elements_size if self.right is not None else 0)
 
 
 def read_file(filename):
@@ -69,6 +73,48 @@ def print_cluster(node, convert=None, level=0):
         print_cluster(node.right, convert, level + 1)
 
 
+def get_distance_depth(node):
+    return node.distance + max((get_distance_depth(node.left) if node.left is not None else 0),
+                               (get_distance_depth(node.right) if node.right is not None else 0))
+
+
+def draw_node(draw, node, x, y, scaling, convert=None):
+    if node.nid < 0:
+        half = node.elements_size * 10
+        top = y - half + node.left.elements_size * 10
+        bottom = y + half - node.right.elements_size * 10
+        print(top, bottom)
+        width = node.distance * scaling
+        horizontal_offset = x + width
+        color = (255, 0, 0)
+
+        draw.line((x, top, x, bottom), fill=color)
+        draw.line((x, top, horizontal_offset, top), fill=color)
+        draw.line((x, bottom, horizontal_offset, bottom), fill=color)
+
+        draw_node(draw, node.left, horizontal_offset, top, scaling, convert=convert)
+        draw_node(draw, node.right, horizontal_offset, bottom, scaling, convert=convert)
+    else:
+        draw.text((x + 5, y - 7), convert(node.nid) if convert is not None else node.nid, (0, 0, 0))
+
+
+def plot_tree(node, width=1200, convert=None, filename='clusters.jpg'):
+    height = len(titles) * 20
+    img = Image.new('RGB', (width, height), (255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    centre = height / 2
+    draw.line((0, centre, 10, centre), fill=(255, 0, 0))
+    scaling = (width - 150) / get_distance_depth(node)
+    draw_node(draw, node, 10, centre, scaling, convert=convert)
+    img.save(filename, 'JPEG')
+
+
 if __name__ == '__main__':
     titles, words, counts = read_file('blogdata.txt')
-    print_cluster(classify(counts), convert=lambda x: titles[x])
+    cluster = classify(counts)
+
+    # 命令行中输出聚类结果
+    # print_cluster(classify(counts), convert=lambda x: titles[x])
+
+    # 通过树状图输出聚类结果
+    plot_tree(cluster, convert=lambda x: titles[x])
