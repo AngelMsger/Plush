@@ -37,8 +37,8 @@ def top_matches(prefs, person, n=5, similarity=sim_pearson):
     return scores[0:n]
 
 
-def recommendations(prefs, person, similarity=sim_pearson):
-    """以相似度较高的人的评价为标准，利用加权平均分给出推荐列表"""
+def recommendations_by_people(prefs, person, similarity=sim_pearson):
+    """以相似度较高的主体的评价为标准，利用加权平均分给出推荐列表"""
     total, sims_sum = {}, {}
 
     for other in prefs:
@@ -82,8 +82,27 @@ def calculate_similar_items(prefs, n=10, similarity=sim_pearson):
     return result
 
 
-print(calculate_similar_items(critics, similarity=sim_euclidean))
-# print(top_matches(critics, 'Toby', 3))
+def recommendations_by_items(prefs, items_match, person):
+    """以相似度较高的客体的评价为标准，利用加权平均分给出推荐列表"""
+    person_ratings = prefs[person]
 
-# movies = transform_prefs(critics)
-# print(top_matches(movies, 'Superman Returns'))
+    total, sim_sum = {}, {}
+    for item, rating in person_ratings.items():
+        for similarity, similar_item in items_match[item]:
+            if similar_item in prefs[person]:
+                continue
+
+            total.setdefault(similar_item, 0)
+            total[similar_item] += rating * similarity
+
+            sim_sum.setdefault(similar_item, 0)
+            sim_sum[similar_item] += similarity
+
+    ranks = [(total[item] / sim_sum[item], item) for item in total]
+    ranks.sort(reverse=True)
+    return ranks
+
+
+if __name__ == '__main__':
+    print(recommendations_by_items(critics, calculate_similar_items(critics, similarity=sim_euclidean), 'Toby'))
+
