@@ -1,9 +1,13 @@
+import random
+
 import numpy as np
 
 from scipy.stats import pearsonr
+
 from PIL import Image, ImageDraw
 
 
+# 分级聚类
 class Node:
     """分级聚类中的树节点"""
 
@@ -129,12 +133,54 @@ def plot_tree(node, width=1200, convert=None, filename='clusters.jpg'):
     img.save(filename, 'JPEG')
 
 
-if __name__ == '__main__':
-    titles, words, counts = read_file('blogdata.txt')
-    result = hierarchical_classify(counts)
+# K均值聚类
+def k_mean_classify(data, calc_distance=pearson, k=4, max_retry=128, convert=None):
+    """K均值聚类"""
 
-    # 命令行中输出聚类结果
+    # 根据原始数据特征随机创建K个模拟中心点
+    rows, cols = data.shape
+    offset = np.min(data, axis=1)
+    limit = np.max(data, axis=1) - offset
+    cluster_centres = np.array([[offset[i] + random.random() * limit[i] for i in range(rows)] for j in range(k)])
+
+    # 本次聚类结果与上一次聚类结果, 在本次聚类结果更新后, 若与上一次聚类结果相等, 则认为聚类已经完成
+    clusters, previous_clusters = None, None
+
+    for t in range(max_retry):
+        # 创建K个空簇
+        clusters = [[] for _ in range(k)]
+
+        # 将所有样本点加入最近中心点所在簇中
+        for i in range(cols):
+            index = int(np.argmin([calc_distance(data[:, i], cluster_centres[j]) for j in range(k)]))
+            clusters[index].append(i)
+
+        # 判定是否与上一次       clusters = np.array(clusters)
+        if np.all(clusters == previous_clusters):
+            break
+        else:
+            previous_clusters = clusters.copy()
+
+        # 以簇中所有样本点的均值更新簇中心点
+        cluster_centres = np.array([np.array([data[:, j] for j in i]).mean(axis=0) for i in clusters])
+
+    return [list(map(convert, i)) for i in clusters] if convert is not None else clusters
+
+
+if __name__ == '__main__':
+    # 读取数据源
+    titles, words, counts = read_file('blogdata.txt')
+
+    # 分级聚类
+    # result = hierarchical_classify(counts)
+
+    # 命令行中输出分级聚类结果
     # print_cluster(classify(counts), convert=lambda x: titles[x])
 
-    # 通过树状图输出聚类结果
-    plot_tree(result, convert=lambda x: titles[x])
+    # 通过树状图输出分级聚类结果
+    # plot_tree(result, convert=lambda x: titles[x])
+
+    # K均值聚类
+    result = k_mean_classify(counts, convert=lambda x: titles[x])
+
+    print(result)
