@@ -3,6 +3,7 @@ import random
 import numpy as np
 
 from scipy.stats import pearsonr
+from scipy.spatial.distance import euclidean
 
 from PIL import Image, ImageDraw
 
@@ -155,7 +156,8 @@ def k_mean_classify(data, calc_distance=pearson, k=4, max_retry=128, convert=Non
             index = int(np.argmin([calc_distance(data[:, i], cluster_centres[j]) for j in range(k)]))
             clusters[index].append(i)
 
-        # 判定是否与上一次       clusters = np.array(clusters)
+        # 判定是否与上一次聚类结果相等
+        clusters = np.array(clusters)
         if np.all(clusters == previous_clusters):
             break
         else:
@@ -165,6 +167,37 @@ def k_mean_classify(data, calc_distance=pearson, k=4, max_retry=128, convert=Non
         cluster_centres = np.array([np.array([data[:, j] for j in i]).mean(axis=0) for i in clusters])
 
     return [list(map(convert, i)) for i in clusters] if convert is not None else clusters
+
+
+def scale_down(data, calc_distance=pearson, rate=0.01, max_retry=1024):
+    """数据降维, 目标是在二维空间中模拟数据在高维空间中的分布情况, 手段实际上是一种简单的梯度下降"""
+    rows, cols = data.shape
+
+    # 样本真实距离
+    real_distance = np.ones((cols, cols))
+    for i in range(cols):
+        for j in range(i + 1, cols):
+            real_distance[i][j] = real_distance[j][i] = calc_distance(data[:, i], data[:, j])
+    assert np.all(real_distance != 0)
+
+    # 样本在二维空间中的距离
+    fake_distance = np.ones((cols, cols))
+
+    # 样本在二维空间中的位置
+    locations = np.random.random((2, cols))
+
+    # 最多重复max_retry次
+    for t in range(max_retry):
+        # 根据二维空间中位置计算二维空间中距离
+        for i in range(cols):
+            for j in range(i + cols):
+                fake_distance[i][j] = fake_distance[j][i] = euclidean(locations[:, i], locations[:, j])
+
+        # TODO: 根据二维空间中距离与高维空间中样本真实距离的差值计算梯度, 使目标函数 error = (fake - real) / real 最小
+
+        # 根据梯度与学习率重新调整样本在二维空间中的位置
+
+# TODO: 绘制数据在二维空间中的分布情况
 
 
 if __name__ == '__main__':
@@ -181,6 +214,6 @@ if __name__ == '__main__':
     # plot_tree(result, convert=lambda x: titles[x])
 
     # K均值聚类
-    result = k_mean_classify(counts, convert=lambda x: titles[x])
+    # result = k_mean_classify(counts, convert=lambda x: titles[x])
 
-    print(result)
+    scale_down(counts)
