@@ -85,7 +85,7 @@ def hierarchical_classify(data, calc_distance=pearson):
     return cluster[0]
 
 
-def print_cluster(node, convert=None, level=0):
+def print_cluster(node, convert=None, level=0) -> None:
     """在命令行中输出分级聚类结果树"""
     if node is not None:
         content = '-' if node.nid < 0 else (convert(node.nid) if convert is not None else node.nid)
@@ -101,7 +101,7 @@ def get_distance_depth(node):
                                (get_distance_depth(node.right) if node.right is not None else 0))
 
 
-def draw_node(draw, node, x, y, scaling, convert=None):
+def draw_node(draw, node, x, y, scaling, convert=None) -> None:
     """递归绘制分级聚类结果树节点"""
     if node.nid < 0:
         half = node.elements_size * 10
@@ -122,7 +122,7 @@ def draw_node(draw, node, x, y, scaling, convert=None):
         draw.text((x + 5, y - 7), convert(node.nid) if convert is not None else node.nid, (0, 0, 0))
 
 
-def plot_tree(node, width=1200, convert=None, filename='clusters.jpg'):
+def plot_tree(node, width=1200, convert=None, filename='clusters.jpg') -> None:
     """绘制分级聚类结果树图像并保存"""
     height = len(titles) * 20
     img = Image.new('RGB', (width, height), (255, 255, 255))
