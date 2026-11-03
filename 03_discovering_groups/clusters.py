@@ -157,16 +157,19 @@ def k_mean_classify(data, calc_distance=pearson, k=4, max_retry=128, convert=Non
             clusters[index].append(i)
 
         # 判定是否与上一次聚类结果相等
-        clusters = np.array(clusters)
-        if np.all(clusters == previous_clusters):
+        # Cluster memberships are ragged lists, not a rectangular NumPy array.
+        if clusters == previous_clusters:
             break
         else:
             previous_clusters = clusters.copy()
 
         # 以簇中所有样本点的均值更新簇中心点
-        cluster_centres = np.array([np.array([data[:, j] for j in i]).mean(axis=0) for i in clusters])
+        cluster_centres = np.array([
+            data[:, members].mean(axis=1) if members else cluster_centres[index]
+            for index, members in enumerate(clusters)
+        ])
 
-    return [list(map(convert, i)) for i in clusters] if convert is not None else clusters
+    return [list(map(convert, i)) for i in clusters] if convert is not None else np.array(clusters, dtype=object)
 
 
 def scale_down(data, calc_distance=pearson, rate=0.01, max_retry=1024):
